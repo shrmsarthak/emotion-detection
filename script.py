@@ -3,11 +3,7 @@
 import cv2
 import numpy as np
 from picamera2 import Picamera2
-from keras.models import load_model
-from keras.preprocessing.image import img_to_array
-
-# Load the pre-trained model
-model = load_model('Emotion_recognition.h5')
+import tensorflow as tf
 
 # Define the emotion labels
 emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
@@ -22,6 +18,9 @@ picam2.start()
 
 # Start OpenCV window thread
 cv2.startWindowThread()
+
+# Load the pre-trained model
+model = tf.keras.models.load_model('Emotion_recognition.h5')
 
 def detect_emotion():
     while True:
@@ -39,7 +38,8 @@ def detect_emotion():
             face_roi = gray[y:y + h, x:x + w]
             face_roi = cv2.resize(face_roi, (48, 48))
             face_roi = face_roi.astype("float") / 255.0
-            face_roi = img_to_array(face_roi.reshape((1, 48, 48, 1)))
+            face_roi = np.expand_dims(face_roi, axis=0)
+            face_roi = np.expand_dims(face_roi, axis=3)
 
             # Make predictions
             preds = model.predict(face_roi)[0]
