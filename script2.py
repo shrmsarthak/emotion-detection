@@ -1,15 +1,6 @@
 import cv2
 import numpy as np
 
-# Load the TensorFlow Lite model
-interpreter = cv2.dnn.readNetFromTensorflow('emotion_recognition.tflite')
-
-# Define the emotion labels
-emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
-
-# Initialize the face cascade classifier
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-
 # Initialize Picamera2
 picam2 = Picamera2()
 picam2.configure(picam2.create_preview_configuration(main={"format": 'rgb', "size": (640, 480)}))
@@ -19,6 +10,12 @@ picam2.start()
 cv2.startWindowThread()
 
 def detect_emotion():
+    # Load the TensorFlow Lite model
+    interpreter = cv2.dnn.readNetFromTensorflow('emotion_recognition.tflite')
+
+    # Define the emotion labels
+    emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
+
     while True:
         # Capture image from Picamera2
         im = picam2.capture_array()
@@ -33,19 +30,22 @@ def detect_emotion():
             # Extract the face ROI (Region of Interest)
             face_roi = gray[y:y + h, x:x + w]
             face_roi = cv2.resize(face_roi, (48, 48))
-            face_roi = face_roi.astype("float") / 255.0
+            face_roi = face_roi.astype("float32") / 255.0
 
-            # Prepare the input tensor
-            blob = cv2.dnn.blobFromImage(face_roi)
+            # Preprocess input data (similar to what you did for Keras)
+            face_roi = np.expand_dims(face_roi, axis=0)
 
-            # Set the input tensor
-            interpreter.setInput(blob)
+            # Set input tensor
+            interpreter.setTensor(face_roi)
 
             # Run inference
-            output = interpreter.forward()
+            interpreter.invoke()
+
+            # Get the output tensor
+            output_data = interpreter.getTensor()
 
             # Get the predicted class label
-            label = emotion_labels[np.argmax(output)]
+            label = emotion_labels[np.argmax(output_data)]
 
             # Display the emotion label on the frame
             cv2.putText(im, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
